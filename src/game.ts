@@ -1,3 +1,14 @@
+import {
+	Bodies,
+	Body,
+	Collision,
+	Composite,
+	Engine,
+	Mouse,
+	Query,
+	Render,
+	Runner,
+} from "matter-js";
 import { Ball } from "./ball";
 import { Box } from "./box";
 import { Cloud } from "./cloud";
@@ -9,10 +20,12 @@ export class Game {
 	cloud: Cloud;
 	box: Box;
 	input: InputHandler;
-	canvas: HTMLCanvasElement;
-	constructor(canvas: HTMLCanvasElement) {
+	engine: Engine;
+	render: Render;
+	mouse: Mouse;
+	constructor() {
 		this.balls = [];
-		this.input = new InputHandler(canvas);
+		this.input = new InputHandler();
 		this.box = new Box(400, 400);
 		this.cloud = new Cloud(
 			new Vector(
@@ -20,51 +33,90 @@ export class Game {
 				this.box.pos.y - this.box.height - 90,
 			),
 		);
-		this.input.addPointerMoveHandler((e: PointerEvent) =>
+		this.engine = Engine.create();
+		this.render = Render.create({
+			engine: this.engine,
+			element: document.body,
+		});
+		Composite.add(this.engine.world, this.box.body);
+		Composite.add(this.engine.world, this.cloud.body);
+		this.mouse = Mouse.create(this.render.canvas);
+		this.mouse.element.addEventListener("pointermove", (e: PointerEvent) =>
 			this.handlePointerMove(e),
 		);
-		this.input.addPointerClickHandler((e: PointerEvent) =>
-			this.handlePointerClickHandler(e),
+		this.mouse.element.addEventListener("pointerup", (e: PointerEvent) =>
+			this.handlePointerClick(e),
 		);
-		this.canvas = canvas;
 	}
 	handlePointerMove(e: PointerEvent): void {
-		const rect = this.canvas.getBoundingClientRect();
-		const posX = e.clientX - rect.x - this.cloud.width / 2;
+		const posX = e.clientX - this.cloud.width / 2;
 		if (
 			posX > this.box.pos.x &&
 			posX < this.box.pos.x + this.box.width - this.cloud.width
 		) {
-			this.cloud.pos.x = posX;
+			Body.setPosition(this.cloud.body, {
+				x: e.clientX,
+				y: this.cloud.body.position.y,
+			});
 		} else if (posX > this.box.pos.x + this.box.width - this.cloud.width) {
-			this.cloud.pos.x = this.box.pos.x + this.box.width - this.cloud.width;
+			Body.setPosition(this.cloud.body, {
+				x: this.box.pos.x + this.box.width - this.cloud.width / 2,
+				y: this.cloud.body.position.y,
+			});
 		} else if (posX < this.box.pos.x) {
 			this.cloud.pos.x = this.box.pos.x;
+			Body.setPosition(this.cloud.body, {
+				x: this.box.pos.x + this.cloud.width / 2,
+				y: this.cloud.body.position.y,
+			});
 		}
 	}
-	handlePointerClickHandler(e: PointerEvent): void {
+	handleCollision(): void {
+		for (let i = 0; i < this.balls.length; i++) {
+			const bodies = this.balls.map((ball) => ball.body);
+			const collisions = Query.collides(this.balls[i].body, bodies);
+			collisions.forEach((ball, j) => {
+				if (this.balls[j].radius === this.balls[i].radius) {
+					Composite.remove(this.engine.world, this.balls[j].body);
+					const newBall = new Ball(this.balls[i].pos, this.balls[j].radius * 2);
+					// Composite.add(this.engine.world, newBall.body);
+					Composite.remove(this.engine.world, this.balls[i].body);
+					return;
+				}
+			});
+		}
+	}
+	runGameLoop(): void {
+		const runner = Runner.create();
+		Runner.run(runner, this.engine);
+		const gameLoop = () => {
+			this.update();
+			requestAnimationFrame(gameLoop);
+		};
+		requestAnimationFrame(gameLoop);
+	}
+	handlePointerClick(e: PointerEvent): void {
 		const cloudPos = new Vector(
-			this.cloud.pos.x + this.cloud.width / 2,
-			this.cloud.pos.y + this.cloud.height,
+			this.cloud.body.position.x,
+			this.cloud.body.position.y + this.cloud.height / 2,
 		);
+		const ball = new Ball(cloudPos, 20);
 		this.balls.push(new Ball(cloudPos, 20));
+		Composite.add(this.engine.world, ball.body);
 	}
 	update(): void {
-		for (let i = 0; i < this.balls.length; i++) {
-			this.balls[i].update(
-				this.balls,
-				i,
-				this.box.pos.x,
-				this.box.pos.x + this.box.width,
-				this.box.pos.y,
-			);
-		}
+		Engine.update(this.engine);
+		this.handleCollision();
 	}
-	draw(ctx: CanvasRenderingContext2D): void {
-		this.cloud.draw(ctx);
-		this.box.draw(ctx);
-		for (const ball of this.balls) {
-			ball.draw(ctx);
-		}
+	draw(): void {
+		const runner = Runner.create();
+		Runner.run(runner, this.engine);
+		const gameLoop = () => {
+			this.update();
+			requestAnimationFrame(gameLoop);
+		};
+		requestAnimationFrame(gameLoop);
+		Render.run(this.render);
+		Runner.run(runner, this.engine);
 	}
 }
