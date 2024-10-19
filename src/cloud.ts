@@ -11,9 +11,6 @@ export class Cloud {
 		this.pos = pos;
 		this.body = Bodies.rectangle(pos.x, pos.y, this.width, this.height, {
 			isStatic: true,
-			collisionFilter: {
-				mask: 0,
-			},
 		});
 	}
 }

@@ -8,6 +8,7 @@ import {
 	Query,
 	Render,
 	Runner,
+	World,
 } from "matter-js";
 import { Ball } from "./ball";
 import { Box } from "./box";
@@ -23,7 +24,9 @@ export class Game {
 	engine: Engine;
 	render: Render;
 	mouse: Mouse;
+	gameOver: boolean;
 	constructor() {
+		this.gameOver = false;
 		this.balls = [];
 		this.input = new InputHandler();
 		this.box = new Box(400, 400);
@@ -41,12 +44,6 @@ export class Game {
 		Composite.add(this.engine.world, this.box.body);
 		Composite.add(this.engine.world, this.cloud.body);
 		this.mouse = Mouse.create(this.render.canvas);
-		this.mouse.element.addEventListener("pointermove", (e: PointerEvent) =>
-			this.handlePointerMove(e),
-		);
-		this.mouse.element.addEventListener("pointerup", (e: PointerEvent) =>
-			this.handlePointerClick(e),
-		);
 	}
 	handlePointerMove(e: PointerEvent): void {
 		const posX = e.clientX - this.cloud.width / 2;
@@ -72,48 +69,81 @@ export class Game {
 		}
 	}
 	handleCollision(): void {
+		this.handleCloudCollision();
 		for (let i = 0; i < this.balls.length; i++) {
-			const bodies = this.balls.map((ball) => ball.body);
-			const collisions = Query.collides(this.balls[i].body, bodies);
-			collisions.forEach((ball, j) => {
-				if (this.balls[j].radius === this.balls[i].radius) {
-					Composite.remove(this.engine.world, this.balls[j].body);
-					const newBall = new Ball(this.balls[i].pos, this.balls[j].radius * 2);
-					// Composite.add(this.engine.world, newBall.body);
-					Composite.remove(this.engine.world, this.balls[i].body);
-					return;
+			for (let j = i + 1; j < this.balls.length; j++) {
+				const collision = Collision.collides(
+					this.balls[i].body,
+					this.balls[j].body,
+				);
+				if (collision) {
+					if (this.balls[i].radius === this.balls[j].radius) {
+						const newBall = new Ball(
+							this.balls[i].body.position,
+							this.balls[i].radius * 2,
+						);
+						Composite.add(this.engine.world, newBall.body);
+						Composite.remove(this.engine.world, this.balls[j].body);
+						Composite.remove(this.engine.world, this.balls[i].body);
+						this.balls.splice(j, 1);
+						this.balls.splice(i, 1);
+						this.balls.push(newBall);
+						break;
+					}
 				}
-			});
+			}
 		}
 	}
-	runGameLoop(): void {
-		const runner = Runner.create();
-		Runner.run(runner, this.engine);
-		const gameLoop = () => {
-			this.update();
-			requestAnimationFrame(gameLoop);
-		};
-		requestAnimationFrame(gameLoop);
+	handleCloudCollision(): void {
+		for (let i = 0; i < this.balls.length; i++) {
+			const collision = Collision.collides(this.balls[i].body, this.cloud.body);
+			if (collision) {
+				console.log("Game over");
+				this.gameOver = true;
+			}
+		}
 	}
 	handlePointerClick(e: PointerEvent): void {
 		const cloudPos = new Vector(
 			this.cloud.body.position.x,
-			this.cloud.body.position.y + this.cloud.height / 2,
+			this.cloud.body.position.y + this.cloud.height - 20,
 		);
 		const ball = new Ball(cloudPos, 20);
-		this.balls.push(new Ball(cloudPos, 20));
+		this.balls.push(ball);
 		Composite.add(this.engine.world, ball.body);
 	}
 	update(): void {
 		Engine.update(this.engine);
 		this.handleCollision();
 	}
+	endGame(): void {
+		this.mouse.element.removeEventListener(
+			"pointermove",
+			this.handlePointerMove,
+		);
+		this.mouse.element.removeEventListener(
+			"pointerdown",
+			this.handlePointerClick,
+		);
+	}
 	draw(): void {
+		this.mouse.element.addEventListener("pointermove", (e: PointerEvent) =>
+			this.handlePointerMove(e),
+		);
+		this.mouse.element.addEventListener("pointerdown", (e: PointerEvent) =>
+			this.handlePointerClick(e),
+		);
 		const runner = Runner.create();
-		Runner.run(runner, this.engine);
+		// Runner.run(runner, this.engine);
 		const gameLoop = () => {
-			this.update();
-			requestAnimationFrame(gameLoop);
+			if (!this.gameOver) {
+				this.update();
+				requestAnimationFrame(gameLoop);
+			} else {
+				this.endGame();
+				Runner.stop(runner);
+				Render.stop(this.render);
+			}
 		};
 		requestAnimationFrame(gameLoop);
 		Render.run(this.render);
