@@ -7,12 +7,14 @@ export class Ball {
 	constructor(pos: Vector, radius: number, showBall?: boolean) {
 		this.pos = pos;
 		this.radius = radius;
+
 		this.body = Bodies.circle(
 			pos.x,
 			pos.y,
 			this.radius,
 			{
-				restitution: 0.2,
+				mass: 0,
+				restitution: 0.24,
 				isStatic: showBall,
 			},
 			1000,
@@ -91,6 +93,11 @@ export class Fruit extends Ball {
 		this.name = name;
 		this.body.render.fillStyle = prop.color;
 		this.points = prop.points;
+		if (this.body.render.sprite) {
+			// this.body.render.sprite.xScale = 0.4;
+			// this.body.render.sprite.yScale = 0.4;
+			// this.body.render.sprite.texture = `/assets/${this.name}.png`;
+		}
 	}
 	nextFruitName(): FruitName {
 		const nextFruitName =

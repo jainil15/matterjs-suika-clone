@@ -36,10 +36,7 @@ export class Game {
 		this.input = new InputHandler();
 		this.box = new Box(400, 400);
 		this.cloud = new Cloud(
-			new Vector(
-				this.box.pos.x + this.box.width / 2 - 40,
-				this.box.pos.y - this.box.height - 90,
-			),
+			new Vector(this.box.pos.x + this.box.width / 2 - 40, this.box.top),
 		);
 		this.engine = Engine.create();
 		this.render = Render.create({
@@ -60,6 +57,7 @@ export class Game {
 			this.handlePointerClick(e),
 		);
 		this.currentFruit = this.showBall();
+		console.log(this.box.top);
 	}
 	showScore(): void {
 		const score = document.getElementById("score");
@@ -70,12 +68,20 @@ export class Game {
 			console.log("");
 		}
 	}
+	isGameOver(): void {
+		for (const fruit of this.fruits) {
+			if (fruit.body.position.y < this.box.top) {
+				console.log("Game over");
+				this.gameOver = true;
+			}
+		}
+	}
 	showBall(): Fruit {
 		if (this.currentFruit) {
 			Composite.remove(this.engine.world, this.currentFruit.body);
 		}
 		const fruitName = Object.keys(FRUIT)[
-			Math.floor(Math.random() * 6)
+			Math.floor(Math.random() * 5)
 		] as FruitName;
 		const newFruit = new Fruit(
 			new Vector(this.cloud.body.position.x, this.cloud.body.position.y),
@@ -84,7 +90,7 @@ export class Game {
 		);
 		newFruit.body.position = new Vector(
 			this.cloud.body.position.x,
-			this.cloud.body.position.y + this.cloud.height / 2,
+			this.cloud.body.position.y + this.cloud.height,
 		);
 		Composite.add(this.engine.world, newFruit.body);
 		return newFruit;
@@ -114,7 +120,7 @@ export class Game {
 		}
 		this.currentFruit.body.position = new Vector(
 			this.cloud.body.position.x,
-			this.cloud.body.position.y + this.cloud.height / 2,
+			this.cloud.body.position.y + this.cloud.height,
 		);
 	}
 	handleCollision(): void {
@@ -135,9 +141,9 @@ export class Game {
 								this.fruits[i].nextFruitName(),
 							);
 							this.score += this.fruits[i].points * 2;
-							Composite.add(this.engine.world, newBall.body);
 							Composite.remove(this.engine.world, this.fruits[j].body);
 							Composite.remove(this.engine.world, this.fruits[i].body);
+							Composite.add(this.engine.world, newBall.body);
 							this.fruits.splice(j, 1);
 							this.fruits.splice(i, 1);
 							this.fruits.push(newBall);
@@ -146,19 +152,6 @@ export class Game {
 						}
 					}
 				}
-			}
-		}
-		this.handleCloudCollision();
-	}
-	handleCloudCollision(): void {
-		for (let i = 0; i < this.fruits.length; i++) {
-			const collision = Collision.collides(
-				this.fruits[i].body,
-				this.cloud.body,
-			);
-			if (collision) {
-				console.log("Game over");
-				this.gameOver = true;
 			}
 		}
 	}
@@ -178,25 +171,15 @@ export class Game {
 			);
 			Composite.remove(this.engine.world, this.currentFruit.body);
 			const fruit = new Fruit(cloudPos, this.currentFruit.name);
-			this.fruits.push(fruit);
+			this.fruits.unshift(fruit);
 			Composite.add(this.engine.world, fruit.body);
 		}
 	}
+
 	update(): void {
-		console.log(this.fruits.length);
 		Engine.update(this.engine);
 		this.handleCollision();
-
-		const top = this.box.height + this.box.pos.y;
-
-		///
-		for (const fruit of this.fruits) {
-			if (fruit.body.position.y < top && fruit.body.velocity.y <= 0) {
-				console.log("Game over");
-				this.gameOver = true;
-				break;
-			}
-		}
+		this.isGameOver();
 	}
 	endGame(): void {
 		this.mouse.element.removeEventListener(
