@@ -36,7 +36,7 @@ export class Game {
 		this.input = new InputHandler();
 		this.box = new Box(400, 400);
 		this.cloud = new Cloud(
-			new Vector(this.box.pos.x + this.box.width / 2 - 40, this.box.top),
+			new Vector(this.box.pos.x + this.box.width / 2 - 40, this.box.top - 25),
 		);
 		this.engine = Engine.create();
 		this.render = Render.create({
@@ -140,6 +140,8 @@ export class Game {
 								this.fruits[i].body.position,
 								this.fruits[i].nextFruitName(),
 							);
+							const audio = new Audio("/assets/fruits-combine.mp3");
+							audio.play();
 							this.score += this.fruits[i].points * 2;
 							Composite.remove(this.engine.world, this.fruits[j].body);
 							Composite.remove(this.engine.world, this.fruits[i].body);
