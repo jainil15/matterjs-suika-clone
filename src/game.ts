@@ -75,7 +75,7 @@ export class Game {
 			Composite.remove(this.engine.world, this.currentFruit.body);
 		}
 		const fruitName = Object.keys(FRUIT)[
-			Math.floor(Math.random() * 5)
+			Math.floor(Math.random() * 6)
 		] as FruitName;
 		const newFruit = new Fruit(
 			new Vector(this.cloud.body.position.x, this.cloud.body.position.y),
@@ -125,7 +125,10 @@ export class Game {
 					this.fruits[j].body,
 				);
 				if (collision) {
-					if (this.fruits[i].name === this.fruits[j].name) {
+					if (
+						this.fruits[i].name === this.fruits[j].name &&
+						this.fruits[i].name !== "titular"
+					) {
 						if (this.fruits[i].nextFruitName()) {
 							const newBall = new Fruit(
 								this.fruits[i].body.position,
@@ -179,21 +182,21 @@ export class Game {
 			Composite.add(this.engine.world, fruit.body);
 		}
 	}
-	isGameWon(): boolean {
-		for (let i = 0; i < this.fruits.length; i++) {
-			if (this.fruits[i].name === "titular") {
-				console.log("Game won");
-				return true;
-			}
-		}
-		return false;
-	}
 	update(): void {
-		if (!this.gameOver && this.isGameWon()) {
-			this.gameOver = true;
-		}
+		console.log(this.fruits.length);
 		Engine.update(this.engine);
 		this.handleCollision();
+
+		const top = this.box.height + this.box.pos.y;
+
+		///
+		for (const fruit of this.fruits) {
+			if (fruit.body.position.y < top && fruit.body.velocity.y <= 0) {
+				console.log("Game over");
+				this.gameOver = true;
+				break;
+			}
+		}
 	}
 	endGame(): void {
 		this.mouse.element.removeEventListener(
