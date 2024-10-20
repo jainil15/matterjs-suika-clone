@@ -5,29 +5,34 @@ import {
 	Composite,
 	Engine,
 	Mouse,
-	Query,
 	Render,
 	Runner,
-	World,
 } from "matter-js";
-import { Ball } from "./ball";
+import { Ball, Fruit, FRUIT, type FruitName } from "./ball";
 import { Box } from "./box";
 import { Cloud } from "./cloud";
 import { InputHandler } from "./inputhandler";
 import { Vector } from "./vector";
 
 export class Game {
-	balls: Ball[];
+	fruits: Fruit[];
 	cloud: Cloud;
 	box: Box;
 	input: InputHandler;
 	engine: Engine;
 	render: Render;
 	mouse: Mouse;
+	currentFruit: Fruit;
 	gameOver: boolean;
+	canClick: boolean;
+	score: number;
 	constructor() {
+		this.canClick = true;
+		this.score = 0;
+		this.showScore();
 		this.gameOver = false;
-		this.balls = [];
+		this.fruits = [];
+
 		this.input = new InputHandler();
 		this.box = new Box(400, 400);
 		this.cloud = new Cloud(
@@ -40,19 +45,59 @@ export class Game {
 		this.render = Render.create({
 			engine: this.engine,
 			element: document.body,
+			options: {
+				wireframes: false,
+			},
 		});
 		Composite.add(this.engine.world, this.box.body);
 		Composite.add(this.engine.world, this.cloud.body);
 		this.mouse = Mouse.create(this.render.canvas);
+
+		this.mouse.element.addEventListener("pointermove", (e: PointerEvent) =>
+			this.handlePointerMove(e),
+		);
+		this.mouse.element.addEventListener("pointerdown", (e: PointerEvent) =>
+			this.handlePointerClick(e),
+		);
+		this.currentFruit = this.showBall();
+	}
+	showScore(): void {
+		const score = document.getElementById("score");
+		if (score) {
+			if (score.innerHTML !== this.score.toString())
+				score.innerHTML = this.score.toString();
+		} else {
+			console.log("");
+		}
+	}
+	showBall(): Fruit {
+		if (this.currentFruit) {
+			Composite.remove(this.engine.world, this.currentFruit.body);
+		}
+		const fruitName = Object.keys(FRUIT)[
+			Math.floor(Math.random() * 5)
+		] as FruitName;
+		const newFruit = new Fruit(
+			new Vector(this.cloud.body.position.x, this.cloud.body.position.y),
+			fruitName,
+			true,
+		);
+		newFruit.body.position = new Vector(
+			this.cloud.body.position.x,
+			this.cloud.body.position.y + this.cloud.height / 2,
+		);
+		Composite.add(this.engine.world, newFruit.body);
+		return newFruit;
 	}
 	handlePointerMove(e: PointerEvent): void {
-		const posX = e.clientX - this.cloud.width / 2;
+		const rect = this.render.canvas.getBoundingClientRect();
+		const posX = e.clientX - rect.left - this.cloud.width / 2;
 		if (
 			posX > this.box.pos.x &&
 			posX < this.box.pos.x + this.box.width - this.cloud.width
 		) {
 			Body.setPosition(this.cloud.body, {
-				x: e.clientX,
+				x: posX + this.cloud.width / 2,
 				y: this.cloud.body.position.y,
 			});
 		} else if (posX > this.box.pos.x + this.box.width - this.cloud.width) {
@@ -67,36 +112,47 @@ export class Game {
 				y: this.cloud.body.position.y,
 			});
 		}
+		this.currentFruit.body.position = new Vector(
+			this.cloud.body.position.x,
+			this.cloud.body.position.y + this.cloud.height / 2,
+		);
 	}
 	handleCollision(): void {
-		this.handleCloudCollision();
-		for (let i = 0; i < this.balls.length; i++) {
-			for (let j = i + 1; j < this.balls.length; j++) {
+		for (let i = 0; i < this.fruits.length; i++) {
+			for (let j = i + 1; j < this.fruits.length; j++) {
 				const collision = Collision.collides(
-					this.balls[i].body,
-					this.balls[j].body,
+					this.fruits[i].body,
+					this.fruits[j].body,
 				);
 				if (collision) {
-					if (this.balls[i].radius === this.balls[j].radius) {
-						const newBall = new Ball(
-							this.balls[i].body.position,
-							this.balls[i].radius * 2,
-						);
-						Composite.add(this.engine.world, newBall.body);
-						Composite.remove(this.engine.world, this.balls[j].body);
-						Composite.remove(this.engine.world, this.balls[i].body);
-						this.balls.splice(j, 1);
-						this.balls.splice(i, 1);
-						this.balls.push(newBall);
-						break;
+					if (this.fruits[i].name === this.fruits[j].name) {
+						if (this.fruits[i].nextFruitName()) {
+							const newBall = new Fruit(
+								this.fruits[i].body.position,
+								this.fruits[i].nextFruitName(),
+							);
+							this.score += this.fruits[i].points * 2;
+							Composite.add(this.engine.world, newBall.body);
+							Composite.remove(this.engine.world, this.fruits[j].body);
+							Composite.remove(this.engine.world, this.fruits[i].body);
+							this.fruits.splice(j, 1);
+							this.fruits.splice(i, 1);
+							this.fruits.push(newBall);
+							this.showScore();
+							break;
+						}
 					}
 				}
 			}
 		}
+		this.handleCloudCollision();
 	}
 	handleCloudCollision(): void {
-		for (let i = 0; i < this.balls.length; i++) {
-			const collision = Collision.collides(this.balls[i].body, this.cloud.body);
+		for (let i = 0; i < this.fruits.length; i++) {
+			const collision = Collision.collides(
+				this.fruits[i].body,
+				this.cloud.body,
+			);
 			if (collision) {
 				console.log("Game over");
 				this.gameOver = true;
@@ -104,15 +160,38 @@ export class Game {
 		}
 	}
 	handlePointerClick(e: PointerEvent): void {
-		const cloudPos = new Vector(
-			this.cloud.body.position.x,
-			this.cloud.body.position.y + this.cloud.height - 20,
-		);
-		const ball = new Ball(cloudPos, 20);
-		this.balls.push(ball);
-		Composite.add(this.engine.world, ball.body);
+		if (this.canClick) {
+			this.canClick = false;
+			setTimeout(() => {
+				this.currentFruit = this.showBall();
+				this.canClick = true;
+			}, 500);
+			const cloudPos = new Vector(
+				this.cloud.body.position.x,
+				this.cloud.body.position.y +
+					this.cloud.width / 2 +
+					this.currentFruit.radius +
+					2,
+			);
+			Composite.remove(this.engine.world, this.currentFruit.body);
+			const fruit = new Fruit(cloudPos, this.currentFruit.name);
+			this.fruits.push(fruit);
+			Composite.add(this.engine.world, fruit.body);
+		}
+	}
+	isGameWon(): boolean {
+		for (let i = 0; i < this.fruits.length; i++) {
+			if (this.fruits[i].name === "titular") {
+				console.log("Game won");
+				return true;
+			}
+		}
+		return false;
 	}
 	update(): void {
+		if (!this.gameOver && this.isGameWon()) {
+			this.gameOver = true;
+		}
 		Engine.update(this.engine);
 		this.handleCollision();
 	}
@@ -127,14 +206,7 @@ export class Game {
 		);
 	}
 	draw(): void {
-		this.mouse.element.addEventListener("pointermove", (e: PointerEvent) =>
-			this.handlePointerMove(e),
-		);
-		this.mouse.element.addEventListener("pointerdown", (e: PointerEvent) =>
-			this.handlePointerClick(e),
-		);
 		const runner = Runner.create();
-		// Runner.run(runner, this.engine);
 		const gameLoop = () => {
 			if (!this.gameOver) {
 				this.update();

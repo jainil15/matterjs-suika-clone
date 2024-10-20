@@ -10,6 +10,9 @@ export class Cloud {
 	constructor(pos: Vector) {
 		this.pos = pos;
 		this.body = Bodies.rectangle(pos.x, pos.y, this.width, this.height, {
+			collisionFilter: {
+				mask: 0,
+			},
 			isStatic: true,
 		});
 	}

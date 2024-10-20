@@ -16,17 +16,7 @@ export class Box {
 			(DISPLAY_WIDTH - this.width) / 2,
 			(DISPLAY_HEIGHT + this.height) / 2,
 		);
-
-		// Create static bodies for the sides of the box (without top)
-		// ctx.moveTo(this.pos.x, this.pos.y);
-		// ctx.lineTo(this.pos.x, this.pos.y - this.height);
-		//
-		// ctx.moveTo(this.pos.x, this.pos.y);
-		// ctx.lineTo(this.pos.x, this.pos.y - this.height);
-		//
-		// ctx.moveTo(this.pos.x, this.pos.y);
-		// ctx.lineTo(this.pos.x + this.width, this.pos.y);
-
+		const bgColor = "#aaaaaa";
 		const leftWall = Bodies.rectangle(
 			this.pos.x + this.width,
 			this.pos.y - this.height / 2,
@@ -34,6 +24,9 @@ export class Box {
 			this.height,
 			{
 				isStatic: true,
+				render: {
+					fillStyle: bgColor,
+				},
 			},
 		);
 		const rightWall = Bodies.rectangle(
@@ -43,15 +36,21 @@ export class Box {
 			this.height,
 			{
 				isStatic: true,
+				render: {
+					fillStyle: bgColor,
+				},
 			},
 		);
 		const bottomWall = Bodies.rectangle(
 			this.pos.x + this.width / 2,
 			this.pos.y,
-			this.width,
+			this.width + this.wallThickness,
 			this.wallThickness,
 			{
 				isStatic: true,
+				render: {
+					fillStyle: bgColor,
+				},
 			},
 		);
 		this.body = [rightWall, bottomWall, leftWall];

@@ -1,25 +1,35 @@
 <html>
-<head>
+  <head>
     <script src="./bundle/bundle.js" type="module"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
     body {
-      /* background-color: #717171; */
+    /* background-color: #717171; */
     }
-    canvas {
+    * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    #game {
+    canvas {
       border: 2px solid black;
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
     }
+    #score{
+
+      font-family: "Silkscreen", sans-serif;
+      font-weight: 400;
+      font-style: normal;
+    }
     </style>
-</head>
+  </head>
   <body>
-    <!-- <canvas id="game" width="500px" height="500px"></canvas> -->
+    <h1 id="score"></h1>
   </body>
 </html>
