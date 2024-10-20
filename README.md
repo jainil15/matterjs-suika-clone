@@ -12,6 +12,23 @@ To run:
 bun run index.ts
 ```
 
+```typescript
+export const FRUIT = {
+	cherry: 20,
+	strawberry: 22,
+	grapes: 25,
+	dekopon: 30,
+	persimmon: 37,
+	apple: 48,
+	nashi: 58,
+	peach: 65,
+	pineapple: 84,
+	melon: 92,
+	titular: 108,
+};
+```
+
+
 ![alt text](https://playsuikagame.com/static/assets/sprite/10.png)
 ![alt text](https://playsuikagame.com/static/assets/sprite/9.png)
 ![alt text](https://playsuikagame.com/static/assets/sprite/8.png)
